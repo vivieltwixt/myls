@@ -11,6 +11,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include "myls.h"
+#include "dllist.h"
 
 #define KB 1024
 #define MB 1048576
@@ -80,20 +81,22 @@ void simpleLs(char *pathname)
 
   if(directory != NULL)  // path refers to a directory
     {
-      printf("This is a directory\n");
+      //printf("This is a directory: %s\n", pathname);
       traverseDirectory(directory);
+      closedir(directory);
     }
   else
     {
       if(fileDescriptor != -1)  // path refers to a file
 	{
-	  //printf("This is a file\n");	 
-	  listfileInfo(fileDescriptor, pathname);
+	  // printf("This is a file\n");	  
+	  close(fileDescriptor);
+	  listfileInfo(pathname);
 	}   
       else
 	{
 	  fprintf(stderr, "ls: cannot access '%s': No such file or directory\n", pathname);
-	  //	  exit(EXIT_FAILURE);
+	  exit(EXIT_FAILURE);
 	}
     }
 }
@@ -101,29 +104,42 @@ void simpleLs(char *pathname)
 
 void traverseDirectory(DIR *directory)
 {
-  //list of directories
+  Dllist directories, ptr;
   struct dirent *directEntry;
+  
+  directories = new_dllist(); // list of directories
+  
   while ((directEntry = readdir(directory)) != NULL)
-    {     
-      if( (strcmp(directEntry->d_name, "..") != 0) && (strcmp(directEntry->d_name, ".") != 0))
+    {    
+      if (directEntry->d_type == DT_DIR) // check if it is a directory entry
 	{
-	  simpleLs(directEntry->d_name);
+	  if( (strcmp(directEntry->d_name, "..") != 0) && (strcmp(directEntry->d_name, ".") != 0))
+	    dll_append(directories, new_jval_s(directEntry->d_name));
+	   printf("adding %s to directories list\n ",directEntry->d_name );
 	}
-      /* if (directEntry->d_type == DT_DIR)
-	 ;
-	 else
-	 simpleLs(directEntry->d_name);
-      */
-      //printf("%d %s\n", (int) directEntry->d_ino, directEntry->d_name);
+      
+      listfileInfo(directEntry->d_name);
     }
-  closedir(directory);
+  
+  if(r_flag)
+    {
+      dll_traverse(ptr, directories)
+	{	  
+	  printf("\n%s :\n", jval_s(ptr->val));
+	  DIR *d = opendir(jval_s(ptr->val));
+	  traverseDirectory(d);
+	  closedir(d);
+	}
+    }
+
+    free_dllist(directories);
 }
 
 
-void listfileInfo(int fileDescriptor, char *pathname)
+void listfileInfo(char *pathname)
 {
   if(lstat(pathname, &metadata) == -1)
-    {
+    {     
       perror("stat");
       exit(EXIT_FAILURE);
     }
@@ -213,7 +229,6 @@ void printPermissions()
       printf("-");
     }
 
-  // More permission options????????????????????????????????????????????
   // User Permissions
   (metadata.st_mode & S_IRUSR) ? printf("r") : printf("-");
   (metadata.st_mode & S_IWUSR) ? printf("w") : printf("-");

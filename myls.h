@@ -4,7 +4,7 @@
 void simpleLs(char *pathname);
 void parseCommandLine(int argc, char *argv[]);
 void traverseDirectory(DIR *directory);
-void listfileInfo(int fileDescriptor, char *pathname);
+void listfileInfo(char *pathname);
 char checkForFileType();
 void printLongListing();
 void printPermissions();
