@@ -1,3 +1,10 @@
+#define _XOPEN_SOURCE 500
+#define KB 1024
+#define MB 1048576
+#define GB 1073741824
+#define MAX_DIR 100
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -8,14 +15,12 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <ftw.h>
 #include <pwd.h>
 #include <grp.h>
 #include "myls.h"
 #include "dllist.h"
 
-#define KB 1024
-#define MB 1048576
-#define GB 1073741824
 
 int c_flag = 0;
 int d_flag = 0;
@@ -81,17 +86,22 @@ void simpleLs(char *pathname)
 
   if(directory != NULL)  // path refers to a directory
     {
-      //printf("This is a directory: %s\n", pathname);
-      traverseDirectory(directory);
-      closedir(directory);
+      // printf("This is a directory: %s\n", pathname);
+      if(r_flag && f_flag)
+	nftw(pathname, traverseDirectory, MAX_DIR, FTW_ACTIONRETVAL);
+      else if(r_flag)
+	nftw(pathname, traverseDirectory, MAX_DIR, FTW_PHYS | FTW_ACTIONRETVAL);
+      else
+	nftw(pathname, traverseDirectory, MAX_DIR, FTW_PHYS | FTW_ACTIONRETVAL);
+	closedir(directory);
     }
   else
     {
       if(fileDescriptor != -1)  // path refers to a file
 	{
-	  // printf("This is a file\n");	  
-	  close(fileDescriptor);
+	  // printf("This is a file\n");
 	  listfileInfo(pathname);
+	  close(fileDescriptor);
 	}   
       else
 	{
@@ -102,37 +112,58 @@ void simpleLs(char *pathname)
 }
 
 
-void traverseDirectory(DIR *directory)
-{
-  Dllist directories, ptr;
-  struct dirent *directEntry;
+int traverseDirectory(const char *fpath, const struct stat *sb,
+		      int typeflag)
+{ 
+      char* path = malloc(strlen(fpath)+1);
+      strcpy(path,fpath);
   
-  directories = new_dllist(); // list of directories
+      if (r_flag && typeflag == FTW_D)
+	printf("\n%s :\n", fpath);
   
-  while ((directEntry = readdir(directory)) != NULL)
-    {    
+      listfileInfo(path);
+   
+      free(path);
+
+      if(!r_flag && typeflag == FTW_D)
+	return FTW_SKIP_SUBTREE;
+      else
+	return 0;
+
+  /*  //Dllist directories, ptr;
+      struct dirent *directEntry;
+      //char* directoryName;
+  
+      directories = new_dllist(); // list of directories
+  
+      while ((directEntry = readdir(directory)) != NULL)
+      {    
       if (directEntry->d_type == DT_DIR) // check if it is a directory entry
-	{
-	  if( (strcmp(directEntry->d_name, "..") != 0) && (strcmp(directEntry->d_name, ".") != 0))
-	    dll_append(directories, new_jval_s(directEntry->d_name));
-	   printf("adding %s to directories list\n ",directEntry->d_name );
-	}
+      {
+      if( (strcmp(directEntry->d_name, "..") != 0) && (strcmp(directEntry->d_name, ".") != 0))
+      {
+      int nameLen = strlen(directEntry->name) + strlen('/') + 
+      directoryName = malloc(strlen() + );
+      dll_append(directories, new_jval_s(directEntry->d_name));
+      }
+      printf("adding %s to directories list\n ",directEntry->d_name );
+      }
       
       listfileInfo(directEntry->d_name);
-    }
+      }
   
-  if(r_flag)
-    {
+      if(r_flag)
+      {
       dll_traverse(ptr, directories)
-	{	  
-	  printf("\n%s :\n", jval_s(ptr->val));
-	  DIR *d = opendir(jval_s(ptr->val));
-	  traverseDirectory(d);
-	  closedir(d);
-	}
-    }
+      {	  
+      printf("\n%s :\n", jval_s(ptr->val));
+      DIR *d = opendir(jval_s(ptr->val));
+      traverseDirectory(d);
+      closedir(d);
+      }
+      }
 
-    free_dllist(directories);
+      free_dllist(directories);*/
 }
 
 

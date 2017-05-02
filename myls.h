@@ -3,7 +3,8 @@
 
 void simpleLs(char *pathname);
 void parseCommandLine(int argc, char *argv[]);
-void traverseDirectory(DIR *directory);
+int traverseDirectory(const char *fpath, const struct stat *sb,
+		      int typeflag);
 void listfileInfo(char *pathname);
 char checkForFileType();
 void printLongListing();
