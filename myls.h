@@ -3,8 +3,7 @@
 
 void simpleLs(char *pathname);
 void parseCommandLine(int argc, char *argv[]);
-int traverseDirectory(const char *fpath, const struct stat *sb,
-		      int typeflag);
+void traverseDirectory(DIR *directory);
 void listfileInfo(char *pathname);
 char checkForFileType();
 void printLongListing();
@@ -13,4 +12,5 @@ long calculateDiskFileSize();
 void printHumanBytes(unsigned long long file_size);
 void printFileModTime();
 void printFileName(char *pathname);
+void followLink(char *symlink);
 #endif
